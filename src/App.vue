@@ -1,26 +1,351 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div class="app-container">
+    <!-- 左侧面板 -->
+    <div class="left-panel" :class="{ 'collapsed': isCollapsed }">
+      <div class="search-container">
+        <input type="text" class="search-input" placeholder="搜索工具..." v-model="searchQuery" />
+        <button class="collapse-btn" @click="toggleCollapse">
+          {{ isCollapsed ? '»' : '«' }}
+        </button>
+      </div>
+      <div class="categories-list">
+        <div 
+          v-for="(category, index) in categories" 
+          :key="index" 
+          class="category-item"
+          :class="{ active: selectedCategory === category.id }"
+          @click="selectCategory(category.id)"
+        >
+          <span class="category-icon">{{ category.icon }}</span>
+          <span class="category-name" v-show="!isCollapsed">{{ category.name }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧面板 -->
+    <div class="right-panel">
+      <!-- 标签页和设置区域 -->
+      <div class="tabs-header">
+        <div class="tabs">
+          <div 
+            v-for="(tab, index) in openTabs" 
+            :key="index" 
+            class="tab"
+            :class="{ active: activeTab === tab.id }"
+            @click="switchTab(tab.id)"
+          >
+            {{ tab.name }}
+            <span class="close-tab" @click.stop="closeTab(tab.id)">×</span>
+          </div>
+        </div>
+        <button class="settings-btn" @click="openSettings">
+          ⚙
+        </button>
+      </div>
+
+      <!-- 工具内容区域 -->
+      <div class="content-area">
+        <div v-if="showSettings" class="settings-panel">
+          <h3>应用设置</h3>
+          <!-- 设置内容 -->
+        </div>
+        <div v-else class="tools-grid">
+          <div 
+            v-for="(tool, index) in filteredTools" 
+            :key="index" 
+            class="tool-card"
+            @click="openTool(tool)"
+          >
+            <div class="tool-icon">{{ tool.icon }}</div>
+            <div class="tool-name">{{ tool.name }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-
 export default {
   name: 'App',
-  components: {
-    HelloWorld
+  data() {
+    return {
+      isCollapsed: false,
+      searchQuery: '',
+      selectedCategory: 'all',
+      activeTab: null,
+      showSettings: false,
+      openTabs: [],
+      categories: [
+        { id: 'all', name: '全部工具', icon: '🏠' },
+        { id: 'dev', name: '开发工具', icon: '💻' },
+        { id: 'format', name: '格式化工具', icon: '🔄' },
+        { id: 'convert', name: '转换工具', icon: '🔄' },
+        { id: 'encode', name: '编码工具', icon: '🔐' },
+      ],
+      tools: [
+        { id: 'json', name: 'JSON格式化', icon: '📋', category: 'format' },
+        { id: 'base64', name: 'Base64编码', icon: '🔐', category: 'encode' },
+        { id: 'markdown', name: 'Markdown编辑器', icon: '📝', category: 'dev' },
+        { id: 'regex', name: '正则测试', icon: '🔍', category: 'dev' },
+        { id: 'color', name: '颜色选择器', icon: '🎨', category: 'dev' },
+        { id: 'uuid', name: 'UUID生成器', icon: '🔑', category: 'dev' },
+        { id: 'jwt', name: 'JWT解析', icon: '🔓', category: 'encode' },
+        { id: 'hash', name: '哈希计算', icon: '🔢', category: 'encode' },
+        { id: 'htmlencode', name: 'HTML编码', icon: '📃', category: 'encode' },
+        { id: 'urlparse', name: 'URL解析', icon: '🔗', category: 'dev' },
+        { id: 'timestamp', name: '时间戳转换', icon: '⏱️', category: 'convert' },
+        { id: 'qrcode', name: '二维码生成', icon: '📱', category: 'convert' },
+      ]
+    }
+  },
+  computed: {
+    filteredTools() {
+      let result = this.tools;
+      
+      if (this.selectedCategory !== 'all') {
+        result = result.filter(tool => tool.category === this.selectedCategory);
+      }
+      
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase();
+        result = result.filter(tool => 
+          tool.name.toLowerCase().includes(query) || 
+          tool.category.toLowerCase().includes(query)
+        );
+      }
+      
+      return result;
+    }
+  },
+  methods: {
+    toggleCollapse() {
+      this.isCollapsed = !this.isCollapsed;
+    },
+    selectCategory(categoryId) {
+      this.selectedCategory = categoryId;
+    },
+    openTool(tool) {
+      if (!this.openTabs.some(tab => tab.id === tool.id)) {
+        this.openTabs.push({
+          id: tool.id,
+          name: tool.name
+        });
+      }
+      this.activeTab = tool.id;
+      this.showSettings = false;
+    },
+    switchTab(tabId) {
+      this.activeTab = tabId;
+      this.showSettings = false;
+    },
+    closeTab(tabId) {
+      const index = this.openTabs.findIndex(tab => tab.id === tabId);
+      if (index !== -1) {
+        this.openTabs.splice(index, 1);
+        
+        // 如果关闭的是当前激活的标签页，则激活前一个标签页
+        if (this.activeTab === tabId) {
+          if (this.openTabs.length > 0) {
+            this.activeTab = this.openTabs[Math.max(0, index - 1)].id;
+          } else {
+            this.activeTab = null;
+          }
+        }
+      }
+    },
+    openSettings() {
+      this.showSettings = true;
+      this.activeTab = null;
+    }
   }
 }
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 左侧面板样式 */
+.left-panel {
+  width: 25%;
+  height: 100%;
+  background-color: #f5f5f5;
+  border-right: 1px solid #ddd;
+  transition: width 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.left-panel.collapsed {
+  width: 60px;
+}
+
+.search-container {
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.collapse-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 10px;
+  font-size: 18px;
+  color: #666;
+}
+
+.categories-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.category-item {
+  padding: 12px 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.category-item:hover {
+  background-color: #e8e8e8;
+}
+
+.category-item.active {
+  background-color: #e0e0e0;
+}
+
+.category-icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+/* 右侧面板样式 */
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tabs-header {
+  height: 50px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+}
+
+.tabs {
+  display: flex;
+  overflow-x: auto;
+  max-width: calc(100% - 50px);
+}
+
+.tab {
+  padding: 0 15px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-right: 1px solid #eee;
+  position: relative;
+  white-space: nowrap;
+}
+
+.tab.active {
+  background-color: #f0f0f0;
+}
+
+.close-tab {
+  margin-left: 10px;
+  font-size: 16px;
+  opacity: 0.6;
+}
+
+.close-tab:hover {
+  opacity: 1;
+}
+
+.settings-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: #666;
+}
+
+.content-area {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.tool-card {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tool-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.tool-icon {
+  font-size: 32px;
+  margin-bottom: 15px;
+}
+
+.tool-name {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.settings-panel {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 </style>
