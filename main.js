@@ -8,7 +8,8 @@ import { app, BrowserWindow } from 'electron'
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 800,
-    height: 600
+    height: 600,
+    titleBarStyle: 'hidden'
   })
   
   //此处需要填写需要加载的项目文件，官网案例写的是win.loadFile('index.html')
