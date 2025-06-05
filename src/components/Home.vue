@@ -35,33 +35,51 @@
       </div>
       <!-- 下部分：功能按钮区 -->
       <div class="action-buttons">
-        <button class="action-btn">
+        <button class="action-btn" @click="showSettings">
           <v-icon name="bi-gear" />
           <span>设置</span>
         </button>
       </div>
     </div>
     <div class="right-panel">
-      右侧面板
+      <Transition name="fade" mode="out-in">
+        <component :is="currentComponent"></component>
+      </Transition>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
+import CodeSnippetManager from './CodeSnippetManager.vue'
+import JsonTools from './JsonTools.vue'
+import Settings from './Settings.vue'
 
 // 选中的分类
 const selectedCategory = ref(1)
 
+// 当前显示的组件
+const currentComponent = shallowRef(CodeSnippetManager)
+
 // 分类数据
 const categories = ref([
-  { id: 1, name: '代码片段管理器', icon: 'fa-flag' },
-  { id: 2, name: 'JSON工具', icon: 'fa-flag' }
+  { id: 1, name: '代码片段管理器', icon: 'fa-flag', component: CodeSnippetManager },
+  { id: 2, name: 'JSON工具', icon: 'fa-flag', component: JsonTools }
 ])
 
 // 选择分类
 const selectCategory = (id) => {
   selectedCategory.value = id
+  const category = categories.value.find(c => c.id === id)
+  if (category) {
+    currentComponent.value = category.component
+  }
+}
+
+// 显示设置面板
+const showSettings = () => {
+  selectedCategory.value = null // 取消选中状态
+  currentComponent.value = Settings
 }
 </script>
 
@@ -208,5 +226,16 @@ const selectCategory = (id) => {
 
 .tool-categories::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* 过渡动画样式 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
