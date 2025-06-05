@@ -205,7 +205,6 @@ const showSettings = () => {
 
 .right-panel {
   flex: 6;
-  padding: 20px;
   background-color: #ffffff;
 }
 

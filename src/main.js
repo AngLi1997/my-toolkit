@@ -8,11 +8,15 @@ import {
   BiGear,
   FaFlag
 } from "oh-vue-icons/icons"
+import { RiAddLine, RiDragMoveLine, RiDeleteBinLine } from 'oh-vue-icons/icons'
 
 // 注册图标
 addIcons(
   BiGear,
-  FaFlag
+  FaFlag,
+  RiAddLine,
+  RiDragMoveLine,
+  RiDeleteBinLine
 )
 
 const app = createApp(App)
