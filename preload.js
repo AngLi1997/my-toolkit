@@ -14,6 +14,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   writeFile: (filePath, content) => {
     console.log('Calling writeFile with path:', filePath)
     return ipcRenderer.invoke('write-file', filePath, content)
+  },
+  deleteFile: (filePath) => {
+    console.log('Calling deleteFile with path:', filePath)
+    return ipcRenderer.invoke('delete-file', filePath)
+  },
+  deleteDirectory: (dirPath) => {
+    console.log('Calling deleteDirectory with path:', dirPath)
+    return ipcRenderer.invoke('delete-directory', dirPath)
   }
 })
 

@@ -7,6 +7,15 @@
       :type="toast.type"
     />
 
+    <!-- 确认对话框 -->
+    <ConfirmDialog
+      v-if="confirmDialog.visible"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      @close="confirmDialog.visible = false"
+      @confirm="handleConfirmDelete"
+    />
+
     <!-- 左侧分类面板 -->
     <div class="category-panel">
       <div class="category-header">
@@ -81,6 +90,7 @@ import { OhVueIcon as VIcon } from 'oh-vue-icons'
 import TreeItem from './TreeItem.vue'
 import AddFileModal from './AddFileModal.vue'
 import MessageToast from './MessageToast.vue'
+import ConfirmDialog from './ConfirmDialog.vue'
 import { VAceEditor } from 'vue3-ace-editor'
 import 'ace-builds/src-noconflict/mode-javascript'
 import 'ace-builds/src-noconflict/mode-java'
@@ -312,9 +322,52 @@ const handleRename = (item) => {
   activeDropdown.value = null
 }
 
+// 确认对话框状态
+const confirmDialog = ref({
+  visible: false,
+  title: '',
+  message: '',
+  itemToDelete: null
+})
+
+// 显示删除确认对话框
+const showDeleteConfirm = (item) => {
+  confirmDialog.value.itemToDelete = item
+  confirmDialog.value.title = item.type === 'file' ? '删除文件' : '删除分类'
+  confirmDialog.value.message = `确定要删除"${item.name}"吗？此操作无法恢复。`
+  confirmDialog.value.visible = true
+}
+
+// 处理删除确认
+const handleConfirmDelete = async () => {
+  const item = confirmDialog.value.itemToDelete
+  if (!item) return
+
+  try {
+    if (item.type === 'file') {
+      await window.electronAPI.deleteFile(item.path)
+      showToast('删除成功')
+    } else {
+      await window.electronAPI.deleteDirectory(item.path)
+      showToast('删除成功')
+    }
+    
+    // 重新读取目录内容
+    categories.value = await readDirectory('/Users/liang/Downloads')
+    
+    // 如果删除的是当前选中的文件，清空编辑器
+    if (selectedFile.value && selectedFile.value.path === item.path) {
+      selectedFile.value = null
+    }
+  } catch (error) {
+    console.error('删除失败:', error)
+    showToast('删除失败 ' + error, 'error')
+  }
+}
+
 // 处理删除分类
 const handleDeleteCategory = (category) => {
-  // TODO: 实现删除分类逻辑
+  showDeleteConfirm(category)
   activeDropdown.value = null
 }
 
@@ -325,8 +378,8 @@ const handleAddSubCategory = (category) => {
 }
 
 // 处理删除文件
-const handleDeleteFile = (item) => {
-  // TODO: 实现删除文件逻辑
+const handleDeleteFile = (file) => {
+  showDeleteConfirm(file)
   activeDropdown.value = null
 }
 
