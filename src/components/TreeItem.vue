@@ -7,7 +7,7 @@
       'expanded': item.expanded
     }"
   >
-    <div class="item-content" @click="toggleExpand(item)">
+    <div class="item-content" @click="handleItemClick">
       <div class="item-name">
         <v-icon 
           :name="item.type === 'file' ? 'ri-file-text-fill' : (item.expanded ? 'ri-folder-open-fill' : 'ri-folder-fill')"
@@ -66,6 +66,7 @@
         @delete-category="handleDeleteCategory"
         @add-sub-category="handleAddSubCategory"
         @delete-file="handleDeleteFile"
+        @select-file="$emit('select-file', $event)"
       />
     </div>
   </div>
@@ -91,8 +92,18 @@ const emit = defineEmits([
   'rename',
   'delete-category',
   'add-sub-category',
-  'delete-file'
+  'delete-file',
+  'select-file'
 ])
+
+// 处理项目点击
+const handleItemClick = () => {
+  if (props.item.type === 'file') {
+    emit('select-file', props.item)
+  } else {
+    toggleExpand(props.item)
+  }
+}
 
 // 切换展开/折叠状态
 const toggleExpand = (item) => {

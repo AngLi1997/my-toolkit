@@ -1,7 +1,7 @@
 ---
 description: 
-globs: 
-alwaysApply: true
+globs: *.vue,*.ts,*.js,*.css,*.html,*.json
+alwaysApply: false
 ---
 # 项目概览
 

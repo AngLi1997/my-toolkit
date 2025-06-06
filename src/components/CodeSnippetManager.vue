@@ -28,13 +28,34 @@
           @delete-category="handleDeleteCategory"
           @add-sub-category="handleAddSubCategory"
           @delete-file="handleDeleteFile"
+          @select-file="handleFileSelect"
         />
       </div>
     </div>
     
     <!-- 右侧内容区 -->
     <div class="content-panel">
-      <!-- 这里后续添加右侧内容 -->
+      <div v-if="selectedFile" class="editor-container">
+        <VAceEditor
+          v-model:value="selectedFile.content"
+          @change="handleEditorChange"
+          :lang="editorLang"
+          theme="chrome"
+          style="height: 100%; width: 100%"
+          :options="{
+            fontSize: 14,
+            showPrintMargin: false,
+            showGutter: true,
+            highlightActiveLine: true,
+            enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true,
+            enableSnippets: true
+          }"
+        />
+      </div>
+      <div v-else class="empty-state">
+        <p>选择一个文件以查看内容</p>
+      </div>
     </div>
   </div>
 </template>
@@ -43,12 +64,56 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { OhVueIcon as VIcon } from 'oh-vue-icons'
 import TreeItem from './TreeItem.vue'
+import { VAceEditor } from 'vue3-ace-editor'
+import 'ace-builds/src-noconflict/mode-javascript'
+import 'ace-builds/src-noconflict/mode-java'
+import 'ace-builds/src-noconflict/mode-python'
+import 'ace-builds/src-noconflict/mode-sh'
+import 'ace-builds/src-noconflict/mode-json'
+import 'ace-builds/src-noconflict/mode-yaml'
+import 'ace-builds/src-noconflict/mode-xml'
+import 'ace-builds/src-noconflict/mode-html'
+import 'ace-builds/src-noconflict/mode-css'
+import 'ace-builds/src-noconflict/mode-typescript'
+import 'ace-builds/src-noconflict/theme-chrome'
+import 'ace-builds/src-noconflict/ext-language_tools'
 
 // 搜索关键词
 const searchQuery = ref('')
 
 // 当前激活的下拉菜单ID
 const activeDropdown = ref(null)
+
+// 当前选中的文件
+const selectedFile = ref(null)
+
+// 编辑器语言模式
+const editorLang = ref('text')
+
+// 文件扩展名到编辑器语言模式的映射
+const languageModeMap = {
+  'js': 'javascript',
+  'jsx': 'javascript',
+  'ts': 'typescript',
+  'tsx': 'typescript',
+  'java': 'java',
+  'py': 'python',
+  'python': 'python',
+  'sh': 'sh',
+  'bash': 'sh',
+  'json': 'json',
+  'yaml': 'yaml',
+  'yml': 'yaml',
+  'xml': 'xml',
+  'html': 'html',
+  'css': 'css'
+}
+
+// 获取文件的语言模式
+const getLanguageMode = (filename) => {
+  const extension = filename.split('.').pop().toLowerCase()
+  return languageModeMap[extension] || 'text'
+}
 
 // 模拟分类数据
 const categories = ref([
@@ -204,6 +269,59 @@ const handleDeleteFile = (item) => {
   activeDropdown.value = null
 }
 
+// 递归查找文件
+const findFile = (categories, fileId) => {
+  for (const category of categories) {
+    if (category.type === 'file' && category.id === fileId) {
+      return category
+    }
+    if (category.children) {
+      const found = findFile(category.children, fileId)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+// 递归更新文件内容
+const updateFileContent = (categories, fileId, newContent) => {
+  const file = findFile(categories, fileId)
+  if (file) {
+    file.content = newContent
+    return true
+  }
+  return false
+}
+
+// 处理编辑器内容变化
+const handleEditorChange = (value) => {
+  if (selectedFile.value && typeof value === 'string') {
+    const file = findFile(categories.value, selectedFile.value.id)
+    if (file) {
+      file.content = value
+    }
+  }
+}
+
+// 处理文件选择
+const handleFileSelect = (file) => {
+  console.log('File selected:', file)
+  if (file.type === 'file') {
+    // 从categories中获取最新的文件数据
+    const currentFile = findFile(categories.value, file.id)
+    if (currentFile) {
+      selectedFile.value = {
+        id: currentFile.id,
+        name: currentFile.name,
+        type: currentFile.type,
+        content: currentFile.content || '' // 确保content有默认值
+      }
+      editorLang.value = getLanguageMode(currentFile.name)
+      console.log('Selected file:', selectedFile.value)
+    }
+  }
+}
+
 // 点击外部关闭下拉菜单
 const handleClickOutside = (event) => {
   if (!event.target.closest('.dropdown')) {
@@ -321,6 +439,23 @@ onUnmounted(() => {
   background-color: #ffffff;
   flex: 1;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-container {
+  flex: 1;
+  height: 100%;
+  width: 100%;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  font-size: 14px;
 }
 </style> 
