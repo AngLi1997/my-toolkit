@@ -101,14 +101,18 @@ const showSettings = () => {
 }
 
 .logo {
-  padding: 16px;
+  padding: 8px 16px;
   border-bottom: 1px solid #e0e0e0;
+  height: 56px;
+  display: flex;
+  align-items: center;
 }
 
 .logo h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
+  line-height: 1;
 }
 
 .tool-categories {
