@@ -8,7 +8,18 @@ import {
   BiGear,
   FaFlag
 } from "oh-vue-icons/icons"
-import { RiAddLine, RiDragMoveLine, RiDeleteBinLine } from 'oh-vue-icons/icons'
+import { 
+  RiAddLine, 
+  RiDragMoveLine, 
+  RiDeleteBinLine, 
+  RiMoreFill,
+  RiFileAddLine,
+  RiPencilLine,
+  RiFolderAddLine,
+  RiFolderFill,
+  RiFolderOpenFill,
+  RiFileTextFill
+} from 'oh-vue-icons/icons'
 
 // 注册图标
 addIcons(
@@ -16,7 +27,14 @@ addIcons(
   FaFlag,
   RiAddLine,
   RiDragMoveLine,
-  RiDeleteBinLine
+  RiDeleteBinLine,
+  RiMoreFill,
+  RiFileAddLine,
+  RiPencilLine,
+  RiFolderAddLine,
+  RiFolderFill,
+  RiFolderOpenFill,
+  RiFileTextFill
 )
 
 const app = createApp(App)

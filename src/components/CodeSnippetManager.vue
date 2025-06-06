@@ -17,67 +17,18 @@
       </div>
       
       <div class="category-tree">
-        <div 
-          v-for="category in filteredCategories" 
-          :key="category.id" 
-          class="category-item"
-          :class="{
-            'has-children': category.children && category.children.length,
-            'expanded': category.expanded
-          }"
-        >
-          <div class="category-content" @click="toggleExpand(category)">
-            <div class="category-name">{{ category.name }}</div>
-            <div class="category-actions">
-              <button class="action-btn" @click.stop="handleMoveCategory(category)">
-                <v-icon name="ri-drag-move-line" />
-              </button>
-              <button class="action-btn delete" @click.stop="handleDeleteCategory(category)">
-                <v-icon name="ri-delete-bin-line" />
-              </button>
-            </div>
-          </div>
-          <!-- 递归渲染子分类 -->
-          <div class="sub-categories" v-if="category.children && category.children.length && category.expanded">
-            <div 
-              v-for="child in category.children" 
-              :key="child.id" 
-              class="category-item"
-              :class="{
-                'has-children': child.children && child.children.length,
-                'expanded': child.expanded
-              }"
-            >
-              <div class="category-content" @click="toggleExpand(child)">
-                <div class="category-name">{{ child.name }}</div>
-                <div class="category-actions">
-                  <button class="action-btn" @click.stop="handleMoveCategory(child)">
-                    <v-icon name="ri-drag-move-line" />
-                  </button>
-                  <button class="action-btn delete" @click.stop="handleDeleteCategory(child)">
-                    <v-icon name="ri-delete-bin-line" />
-                  </button>
-                </div>
-              </div>
-              <!-- 第三级子分类 (如果需要) -->
-              <div class="sub-categories" v-if="child.children && child.children.length && child.expanded">
-                <div v-for="grandChild in child.children" :key="grandChild.id" class="category-item">
-                  <div class="category-content">
-                    <div class="category-name">{{ grandChild.name }}</div>
-                    <div class="category-actions">
-                      <button class="action-btn" @click.stop="handleMoveCategory(grandChild)">
-                        <v-icon name="ri-drag-move-line" />
-                      </button>
-                      <button class="action-btn delete" @click.stop="handleDeleteCategory(grandChild)">
-                        <v-icon name="ri-delete-bin-line" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <TreeItem
+          v-for="category in filteredCategories"
+          :key="category.id"
+          :item="category"
+          :active-dropdown="activeDropdown"
+          @toggle-dropdown="toggleDropdown"
+          @add-file="handleAddFile"
+          @rename="handleRename"
+          @delete-category="handleDeleteCategory"
+          @add-sub-category="handleAddSubCategory"
+          @delete-file="handleDeleteFile"
+        />
       </div>
     </div>
     
@@ -89,33 +40,91 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { OhVueIcon as VIcon } from 'oh-vue-icons'
+import TreeItem from './TreeItem.vue'
 
 // 搜索关键词
 const searchQuery = ref('')
+
+// 当前激活的下拉菜单ID
+const activeDropdown = ref(null)
 
 // 模拟分类数据
 const categories = ref([
   {
     id: 1,
     name: '代码',
+    type: 'category',
     expanded: false,
     children: [
-      { id: 11, name: 'Java', expanded: false },
-      { id: 12, name: 'Python', expanded: false },
-      { id: 13, name: 'Shell', expanded: false }
+      { 
+        id: 11, 
+        name: 'Java', 
+        type: 'category',
+        expanded: false,
+        children: [
+          {
+            id: 111,
+            name: 'Spring Boot 启动模板.java',
+            type: 'file',
+            content: `@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}`
+          },
+          {
+            id: 112,
+            name: 'JPA实体类模板.java',
+            type: 'file',
+            content: `@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private String username;
+    
+    @Column(nullable = false)
+    private String email;
+}`
+          }
+        ]
+      },
+      { 
+        id: 12, 
+        name: 'Python', 
+        type: 'category',
+        expanded: false 
+      },
+      { 
+        id: 13, 
+        name: 'Shell', 
+        type: 'category',
+        expanded: false 
+      }
     ]
   },{
     id: 2,
     name: '脚本',
+    type: 'category',
     expanded: false,
     children: [
-      { id: 21, name: 'Shell', expanded: false }
+      { 
+        id: 21, 
+        name: 'Shell', 
+        type: 'category',
+        expanded: false 
+      }
     ]
   },{
     id: 3,
     name: '配置文件',
+    type: 'category',
     expanded: false
   }
 ])
@@ -138,19 +147,25 @@ const filteredCategories = computed(() => {
       }
       
       // 如果子分类有匹配项，保留父分类
-      return nameMatch || filteredChildren.length > 0
+      if (filteredChildren.length > 0) {
+        cat.children = filteredChildren
+        return true
+      }
+      
+      return nameMatch
     })
   }
   
-  return filterCategories(categories.value)
+  return filterCategories(JSON.parse(JSON.stringify(categories.value)))
 })
 
-// 切换分类展开/折叠状态
-const toggleExpand = (category) => {
-  if (!category.expanded) {
-    category.expanded = true
+// 切换下拉菜单
+const toggleDropdown = (event, item) => {
+  event.stopPropagation()
+  if (activeDropdown.value === item.id) {
+    activeDropdown.value = null
   } else {
-    category.expanded = false
+    activeDropdown.value = item.id
   }
 }
 
@@ -159,15 +174,51 @@ const handleAddCategory = () => {
   // TODO: 实现添加分类逻辑
 }
 
-// 处理移动分类
-const handleMoveCategory = (category) => {
-  // TODO: 实现移动分类逻辑
+// 处理添加文件
+const handleAddFile = (category) => {
+  // TODO: 实现添加文件逻辑
+  activeDropdown.value = null
+}
+
+// 处理重命名
+const handleRename = (item) => {
+  // TODO: 实现重命名逻辑
+  activeDropdown.value = null
 }
 
 // 处理删除分类
 const handleDeleteCategory = (category) => {
   // TODO: 实现删除分类逻辑
+  activeDropdown.value = null
 }
+
+// 处理添加子目录
+const handleAddSubCategory = (category) => {
+  // TODO: 实现添加子目录逻辑
+  activeDropdown.value = null
+}
+
+// 处理删除文件
+const handleDeleteFile = (item) => {
+  // TODO: 实现删除文件逻辑
+  activeDropdown.value = null
+}
+
+// 点击外部关闭下拉菜单
+const handleClickOutside = (event) => {
+  if (!event.target.closest('.dropdown')) {
+    activeDropdown.value = null
+  }
+}
+
+// 监听全局点击事件
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>
@@ -264,120 +315,6 @@ const handleDeleteCategory = (category) => {
 
 .category-tree::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
-}
-
-.category-item {
-  margin-bottom: 4px;
-  cursor: pointer;
-  position: relative;
-}
-
-.category-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px;
-  background-color: transparent;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  position: relative;
-}
-
-.category-content:hover {
-  background-color: #EBEBEB;
-}
-
-.category-name {
-  font-size: 14px;
-  color: #333;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
-}
-
-.category-name::before {
-  content: '';
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  min-width: 16px;
-  margin-right: 8px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23787878'%3E%3Cpath d='M20 5h-8.586l-2-2H4c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V7c0-1.103-.897-2-2-2zM4 19V7h16l.002 12H4z'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-.category-item.has-children > .category-content::after {
-  content: '';
-  position: absolute;
-  right: 40px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 12px;
-  height: 12px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23787878'%3E%3Cpath d='M16.293 9.293L12 13.586 7.707 9.293 6.293 10.707 12 16.414 17.707 10.707z'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  transition: transform 0.2s ease;
-}
-
-.category-item.has-children.expanded > .category-content::after {
-  transform: translateY(-50%) rotate(180deg);
-}
-
-.category-actions {
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.category-content:hover .category-actions {
-  opacity: 1;
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  padding: 2px;
-  cursor: pointer;
-  color: #666;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-  background-color: #e0e0e0;
-}
-
-.action-btn.delete:hover {
-  color: #dc3545;
-  background-color: rgba(220, 53, 69, 0.1);
-}
-
-.sub-categories {
-  margin-left: 20px;
-  margin-top: 4px;
-  position: relative;
-}
-
-.sub-categories::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -10px;
-  width: 1px;
-  height: 100%;
-  background-color: #e0e0e0;
 }
 
 .content-panel {
