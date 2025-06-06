@@ -133,6 +133,7 @@ const categories = ref([
             id: 111,
             name: 'Spring Boot 启动模板.java',
             type: 'file',
+            
             content: `@SpringBootApplication
 public class Application {
     public static void main(String[] args) {
