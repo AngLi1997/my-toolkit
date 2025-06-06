@@ -103,7 +103,7 @@ const showSettings = () => {
 .logo {
   padding: 8px 16px;
   border-bottom: 1px solid #e0e0e0;
-  height: 56px;
+  height: 80px;
   display: flex;
   align-items: center;
 }
