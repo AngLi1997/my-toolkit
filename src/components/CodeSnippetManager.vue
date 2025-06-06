@@ -16,6 +16,14 @@
       @confirm="handleConfirmDelete"
     />
 
+    <!-- 添加分类模态框 -->
+    <AddCategoryModal
+      v-if="showAddCategoryModal"
+      :parent-path="'/Users/liang/Downloads'"
+      @close="showAddCategoryModal = false"
+      @submit="handleAddCategorySubmit"
+    />
+
     <!-- 左侧分类面板 -->
     <div class="category-panel">
       <div class="category-header">
@@ -27,9 +35,32 @@
             class="search-input"
           >
         </div>
-        <button class="add-category-btn" @click="handleAddCategory">
-          <v-icon name="ri-add-line" />
-        </button>
+        <DropdownMenu>
+          <template #trigger>
+            <button class="add-category-btn">
+              <v-icon name="ri-add-line" />
+            </button>
+          </template>
+          <div class="dropdown-content">
+            <div class="dropdown-item" @click="handleAddRootCategory">
+              <v-icon name="ri-folder-add-line" />
+              <span>新增分类</span>
+            </div>
+            <div class="dropdown-item" @click="handleAddRootFile">
+              <v-icon name="ri-file-add-line" />
+              <span>新增文件</span>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" @click="handleExportZip">
+              <v-icon name="ri-file-zip-line" />
+              <span>导出 ZIP</span>
+            </div>
+            <div class="dropdown-item" @click="handleImportZip">
+              <v-icon name="ri-upload-line" />
+              <span>导入 ZIP</span>
+            </div>
+          </div>
+        </DropdownMenu>
       </div>
       
       <div class="category-tree">
@@ -89,8 +120,10 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { OhVueIcon as VIcon } from 'oh-vue-icons'
 import TreeItem from './TreeItem.vue'
 import AddFileModal from './AddFileModal.vue'
+import AddCategoryModal from './AddCategoryModal.vue'
 import MessageToast from './MessageToast.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
+import DropdownMenu from './DropdownMenu.vue'
 import { VAceEditor } from 'vue3-ace-editor'
 import 'ace-builds/src-noconflict/mode-javascript'
 import 'ace-builds/src-noconflict/mode-java'
@@ -243,9 +276,27 @@ const toggleDropdown = (event, item) => {
   }
 }
 
-// 处理添加分类
-const handleAddCategory = () => {
-  // TODO: 实现添加分类逻辑
+// 添加分类相关状态
+const showAddCategoryModal = ref(false)
+
+// 处理根目录添加分类
+const handleAddRootCategory = () => {
+  showAddCategoryModal.value = true
+}
+
+// 处理添加分类提交
+const handleAddCategorySubmit = async ({ name }) => {
+  try {
+    const newDirPath = `/Users/liang/Downloads/${name}`
+    await window.electronAPI.createDirectory(newDirPath)
+    
+    // 重新读取目录内容
+    categories.value = await readDirectory('/Users/liang/Downloads')
+    showToast('创建成功')
+  } catch (error) {
+    console.error('创建目录失败:', error)
+    showToast('创建失败: ' + error, 'error')
+  }
 }
 
 // 添加文件相关状态
@@ -502,6 +553,28 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
   document.removeEventListener('keydown', handleKeyDown)
 })
+
+// 处理根目录添加文件
+const handleAddRootFile = () => {
+  handleAddFile({
+    id: 0,
+    name: 'root',
+    type: 'category',
+    path: '/Users/liang/Downloads'
+  })
+}
+
+// 处理导出 ZIP
+const handleExportZip = () => {
+  // TODO: 实现导出 ZIP 的逻辑
+  showToast('功能开发中', 'info')
+}
+
+// 处理导入 ZIP
+const handleImportZip = () => {
+  // TODO: 实现导入 ZIP 的逻辑
+  showToast('功能开发中', 'info')
+}
 </script>
 
 <style scoped>
@@ -622,5 +695,38 @@ onUnmounted(() => {
   height: 100%;
   color: #666;
   font-size: 14px;
+}
+
+.dropdown-content {
+  padding: 4px 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.dropdown-item .v-icon {
+  font-size: 16px;
+  color: #666;
+}
+
+.dropdown-item span {
+  font-size: 14px;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 4px 0;
 }
 </style> 

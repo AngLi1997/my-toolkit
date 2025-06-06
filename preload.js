@@ -22,6 +22,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteDirectory: (dirPath) => {
     console.log('Calling deleteDirectory with path:', dirPath)
     return ipcRenderer.invoke('delete-directory', dirPath)
+  },
+  createDirectory: (dirPath) => {
+    console.log('Calling createDirectory with path:', dirPath)
+    return ipcRenderer.invoke('create-directory', dirPath)
   }
 })
 

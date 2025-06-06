@@ -4,7 +4,7 @@
  */
 const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path')
-const { readdir, readFile, writeFile, stat, rm } = require('fs/promises')
+const { readdir, readFile, writeFile, stat, rm, mkdir } = require('fs/promises')
 
 // 获取应用程序的根目录路径
 const APP_ROOT = __dirname
@@ -115,6 +115,17 @@ ipcMain.handle('delete-directory', async (event, dirPath) => {
     return true
   } catch (error) {
     console.error('删除目录失败:', error)
+    throw error
+  }
+})
+
+// 创建目录
+ipcMain.handle('create-directory', async (event, dirPath) => {
+  try {
+    await mkdir(dirPath)
+    return true
+  } catch (error) {
+    console.error('创建目录失败:', error)
     throw error
   }
 })
