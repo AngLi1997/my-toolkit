@@ -2,9 +2,12 @@
  * app 模块，它控制应用程序的事件生命周期。
  * BrowserWindow 模块，它创建和管理应用程序 窗口。
  */
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
-const { readdir, readFile, writeFile, stat, rm, mkdir } = require('fs/promises')
+const os = require('os')
+const { readdir, readFile, writeFile, stat, mkdir, access } = require('fs/promises')
+const { constants } = require('fs')
+const { promisify } = require('util')
 
 // 获取应用程序的根目录路径
 const APP_ROOT = __dirname
@@ -120,13 +123,54 @@ ipcMain.handle('delete-directory', async (event, dirPath) => {
   }
 })
 
-// 创建目录
-ipcMain.handle('create-directory', async (event, dirPath) => {
+// IPC 处理程序
+ipcMain.handle('get-username', () => {
+  return os.userInfo().username
+})
+
+ipcMain.handle('get-platform', () => {
+  return process.platform
+})
+
+ipcMain.handle('select-directory', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: '选择代码片段存储位置'
+  })
+  return result
+})
+
+// 检查路径是否存在
+ipcMain.handle('path-exists', async (event, targetPath) => {
   try {
-    await mkdir(dirPath)
+    await access(targetPath)
     return true
-  } catch (error) {
-    console.error('创建目录失败:', error)
-    throw error
+  } catch {
+    return false
   }
+})
+
+// 检查是否为目录
+ipcMain.handle('is-directory', async (event, targetPath) => {
+  try {
+    const stats = await stat(targetPath)
+    return stats.isDirectory()
+  } catch {
+    return false
+  }
+})
+
+// 检查是否有写入权限
+ipcMain.handle('has-write-access', async (event, targetPath) => {
+  try {
+    await access(targetPath, constants.W_OK)
+    return true
+  } catch {
+    return false
+  }
+})
+
+// 创建目录
+ipcMain.handle('create-directory', async (event, targetPath) => {
+  await mkdir(targetPath, { recursive: true })
 })

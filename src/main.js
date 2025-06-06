@@ -18,7 +18,11 @@ import {
   RiFolderAddLine,
   RiFolderFill,
   RiFolderOpenFill,
-  RiFileTextFill
+  RiFileTextFill,
+  RiFileCopyLine,
+  RiSettings3Line,
+  RiCloseLine,
+  RiFolderOpenLine
 } from 'oh-vue-icons/icons'
 
 // 注册图标
@@ -34,7 +38,11 @@ addIcons(
   RiFolderAddLine,
   RiFolderFill,
   RiFolderOpenFill,
-  RiFileTextFill
+  RiFileTextFill,
+  RiFileCopyLine,
+  RiSettings3Line,
+  RiCloseLine,
+  RiFolderOpenLine
 )
 
 const app = createApp(App)

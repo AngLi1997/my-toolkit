@@ -98,7 +98,7 @@
             v-model:value="selectedFile.content"
             @change="handleEditorChange"
             :lang="editorLang"
-            theme="chrome"
+            :theme="settings.editorTheme"
             style="height: 100%; width: 100%"
             :options="{
               fontSize: 14,
@@ -124,6 +124,14 @@
       @close="showAddFileModal = false"
       @submit="handleAddFileSubmit"
     />
+
+    <!-- 设置对话框 -->
+    <SettingsDialog
+      v-if="showSettingsDialog"
+      :settings="settings"
+      @close="showSettingsDialog = false"
+      @save="handleSettingsSave"
+    />
   </div>
 </template>
 
@@ -136,6 +144,8 @@ import AddCategoryModal from './AddCategoryModal.vue'
 import MessageToast from './MessageToast.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import DropdownMenu from './DropdownMenu.vue'
+import SettingsDialog from './SettingsDialog.vue'
+import SettingsManager from '../utils/settings'
 import { VAceEditor } from 'vue3-ace-editor'
 import 'ace-builds/src-noconflict/mode-javascript'
 import 'ace-builds/src-noconflict/mode-java'
@@ -149,6 +159,21 @@ import 'ace-builds/src-noconflict/mode-css'
 import 'ace-builds/src-noconflict/mode-typescript'
 import 'ace-builds/src-noconflict/theme-chrome'
 import 'ace-builds/src-noconflict/ext-language_tools'
+
+// 导入所有需要的 ace 主题
+import 'ace-builds/src-noconflict/theme-chrome'
+import 'ace-builds/src-noconflict/theme-clouds'
+import 'ace-builds/src-noconflict/theme-crimson_editor'
+import 'ace-builds/src-noconflict/theme-dawn'
+import 'ace-builds/src-noconflict/theme-dreamweaver'
+import 'ace-builds/src-noconflict/theme-eclipse'
+import 'ace-builds/src-noconflict/theme-github'
+import 'ace-builds/src-noconflict/theme-textmate'
+import 'ace-builds/src-noconflict/theme-tomorrow'
+import 'ace-builds/src-noconflict/theme-xcode'
+import 'ace-builds/src-noconflict/theme-monokai'
+import 'ace-builds/src-noconflict/theme-solarized_dark'
+import 'ace-builds/src-noconflict/theme-solarized_light'
 
 // 搜索关键词
 const searchQuery = ref('')
@@ -234,7 +259,16 @@ const readDirectory = async (dirPath) => {
 // 分类数据
 const categories = ref([])
 
-// 初始化分类数据
+// 设置对话框状态
+const showSettingsDialog = ref(false)
+
+// 设置状态
+const settings = ref({
+  storagePath: '',
+  editorTheme: 'chrome'
+})
+
+// 初始化设置
 onMounted(async () => {
   // 等待一小段时间确保electronAPI已经初始化
   await new Promise(resolve => setTimeout(resolve, 1000))
@@ -244,8 +278,16 @@ onMounted(async () => {
     return
   }
   
-  const downloadsPath = '/Users/liang/Downloads'
-  categories.value = await readDirectory(downloadsPath)
+  try {
+    // 初始化设置
+    settings.value = await SettingsManager.initialize()
+    
+    // 读取目录内容
+    categories.value = await readDirectory(settings.value.storagePath)
+  } catch (error) {
+    console.error('初始化失败:', error)
+    showToast('初始化失败: ' + error.message, 'error')
+  }
 })
 
 // 过滤分类
@@ -603,8 +645,28 @@ const handleCopy = async () => {
 
 // 处理设置
 const handleSettings = () => {
-  // TODO: 实现设置逻辑
-  showToast('功能开发中', 'info')
+  showSettingsDialog.value = true
+}
+
+// 处理设置保存
+const handleSettingsSave = async (newSettings) => {
+  try {
+    // 保存设置
+    await SettingsManager.saveSettings(newSettings)
+    
+    // 更新设置
+    settings.value = newSettings
+    
+    // 如果存储路径改变，重新读取目录内容
+    if (settings.value.storagePath !== newSettings.storagePath) {
+      categories.value = await readDirectory(newSettings.storagePath)
+    }
+    
+    showToast('设置保存成功')
+  } catch (error) {
+    console.error('保存设置失败:', error)
+    showToast('保存设置失败: ' + error.message, 'error')
+  }
 }
 </script>
 
@@ -754,6 +816,7 @@ const handleSettings = () => {
 
 .editor-toolbar button .v-icon {
   font-size: 16px;
+  
 }
 
 .editor-content {
