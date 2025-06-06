@@ -106,6 +106,7 @@ const showSettings = () => {
   height: 80px;
   display: flex;
   align-items: center;
+  -webkit-app-region: drag;
 }
 
 .logo h1 {
@@ -113,6 +114,7 @@ const showSettings = () => {
   font-size: 24px;
   font-weight: 600;
   line-height: 1;
+  -webkit-app-region: drag;
 }
 
 .tool-categories {

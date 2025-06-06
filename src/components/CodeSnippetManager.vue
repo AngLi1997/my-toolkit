@@ -82,26 +82,38 @@
     
     <!-- 右侧内容区 -->
     <div class="content-panel">
-      <div v-if="selectedFile" class="editor-container">
-        <VAceEditor
-          v-model:value="selectedFile.content"
-          @change="handleEditorChange"
-          :lang="editorLang"
-          theme="chrome"
-          style="height: 100%; width: 100%"
-          :options="{
-            fontSize: 14,
-            showPrintMargin: false,
-            showGutter: true,
-            highlightActiveLine: true,
-            enableBasicAutocompletion: true,
-            enableLiveAutocompletion: true,
-            enableSnippets: true
-          }"
-        />
+      <div class="editor-toolbar">
+        <div class="toolbar-buttons">
+          <button @click="handleCopy" title="复制代码">
+            <v-icon name="ri-file-copy-line" />
+          </button>
+          <button @click="handleSettings" title="设置">
+            <v-icon name="ri-settings-3-line" />
+          </button>
+        </div>
       </div>
-      <div v-else class="empty-state">
-        <p>选择一个文件以查看内容</p>
+      <div class="editor-content">
+        <div v-if="selectedFile" class="editor-container">
+          <VAceEditor
+            v-model:value="selectedFile.content"
+            @change="handleEditorChange"
+            :lang="editorLang"
+            theme="chrome"
+            style="height: 100%; width: 100%"
+            :options="{
+              fontSize: 14,
+              showPrintMargin: false,
+              showGutter: true,
+              highlightActiveLine: true,
+              enableBasicAutocompletion: true,
+              enableLiveAutocompletion: true,
+              enableSnippets: true
+            }"
+          />
+        </div>
+        <div v-else class="empty-state">
+          <p>选择一个文件以查看内容</p>
+        </div>
       </div>
     </div>
 
@@ -575,6 +587,25 @@ const handleImportZip = () => {
   // TODO: 实现导入 ZIP 的逻辑
   showToast('功能开发中', 'info')
 }
+
+// 处理复制代码
+const handleCopy = async () => {
+  if (selectedFile.value && selectedFile.value.content) {
+    try {
+      await navigator.clipboard.writeText(selectedFile.value.content)
+      showToast('复制成功')
+    } catch (error) {
+      console.error('复制失败:', error)
+      showToast('复制失败', 'error')
+    }
+  }
+}
+
+// 处理设置
+const handleSettings = () => {
+  // TODO: 实现设置逻辑
+  showToast('功能开发中', 'info')
+}
 </script>
 
 <style scoped>
@@ -604,12 +635,14 @@ const handleImportZip = () => {
   background-color: #f5f5f5;
   height: 80px;
   align-items: center;
+  -webkit-app-region: drag;
 }
 
 .search-box {
   flex: 1;
   display: flex;
   align-items: center;
+  -webkit-app-region: no-drag;
 }
 
 .search-input {
@@ -630,6 +663,7 @@ const handleImportZip = () => {
 }
 
 .add-category-btn {
+  -webkit-app-region: no-drag;
   background-color: #ffffff;
   color: #666;
   border: 1px solid #e0e0e0;
@@ -682,10 +716,58 @@ const handleImportZip = () => {
   flex-direction: column;
 }
 
+.editor-toolbar {
+  padding: 12px 16px;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f5f5f5;
+  height: 80px;
+  align-items: center;
+  justify-content: flex-end;
+  -webkit-app-region: drag;
+}
+
+.toolbar-buttons {
+  display: flex;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.editor-toolbar button {
+  background-color: #ffffff;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.editor-toolbar button:hover {
+  background-color: #EBEBEB;
+}
+
+.editor-toolbar button .v-icon {
+  font-size: 16px;
+}
+
+.editor-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+}
+
 .editor-container {
   flex: 1;
   height: 100%;
   width: 100%;
+  /* border-left: 1px solid #e0e0e0; */
 }
 
 .empty-state {
