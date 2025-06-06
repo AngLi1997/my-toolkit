@@ -1,5 +1,12 @@
 <template>
   <div class="code-snippet-manager">
+    <!-- 消息提示 -->
+    <MessageToast
+      :visible="toast.visible"
+      :message="toast.message"
+      :type="toast.type"
+    />
+
     <!-- 左侧分类面板 -->
     <div class="category-panel">
       <div class="category-header">
@@ -57,6 +64,14 @@
         <p>选择一个文件以查看内容</p>
       </div>
     </div>
+
+    <!-- 添加文件模态框 -->
+    <AddFileModal
+      v-if="showAddFileModal"
+      :category="selectedCategory"
+      @close="showAddFileModal = false"
+      @submit="handleAddFileSubmit"
+    />
   </div>
 </template>
 
@@ -64,6 +79,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { OhVueIcon as VIcon } from 'oh-vue-icons'
 import TreeItem from './TreeItem.vue'
+import AddFileModal from './AddFileModal.vue'
+import MessageToast from './MessageToast.vue'
 import { VAceEditor } from 'vue3-ace-editor'
 import 'ace-builds/src-noconflict/mode-javascript'
 import 'ace-builds/src-noconflict/mode-java'
@@ -115,85 +132,66 @@ const getLanguageMode = (filename) => {
   return languageModeMap[extension] || 'text'
 }
 
-// 模拟分类数据
-const categories = ref([
-  {
-    id: 1,
-    name: '代码',
-    type: 'category',
-    expanded: false,
-    children: [
-      { 
-        id: 11, 
-        name: 'Java', 
-        type: 'category',
-        expanded: false,
-        children: [
-          {
-            id: 111,
-            name: 'Spring Boot 启动模板.java',
-            type: 'file',
-            
-            content: `@SpringBootApplication
-public class Application {
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+// 生成唯一ID
+let idCounter = 1
+const generateId = () => idCounter++
+
+// 读取目录内容
+const readDirectory = async (dirPath) => {
+  try {
+    if (!window.electronAPI) {
+      console.error('electronAPI 未初始化')
+      return []
     }
-}`
-          },
-          {
-            id: 112,
-            name: 'JPA实体类模板.java',
-            type: 'file',
-            content: `@Entity
-@Table(name = "users")
-public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
     
-    @Column(nullable = false)
-    private String username;
+    const items = await window.electronAPI.readDirectory(dirPath)
+    const result = []
     
-    @Column(nullable = false)
-    private String email;
-}`
-          }
-        ]
-      },
-      { 
-        id: 12, 
-        name: 'Python', 
-        type: 'category',
-        expanded: false 
-      },
-      { 
-        id: 13, 
-        name: 'Shell', 
-        type: 'category',
-        expanded: false 
+    for (const item of items) {
+      // 过滤掉以点开头的隐藏文件和文件夹
+      if (!item.name.startsWith('.')) {
+        result.push({
+          id: generateId(),
+          name: item.name,
+          type: item.type,
+          expanded: false,
+          children: item.isDirectory ? await readDirectory(item.path) : undefined,
+          path: item.path
+        })
       }
-    ]
-  },{
-    id: 2,
-    name: '脚本',
-    type: 'category',
-    expanded: false,
-    children: [
-      { 
-        id: 21, 
-        name: 'Shell', 
-        type: 'category',
-        expanded: false 
+    }
+    
+    // 对文件夹和文件进行排序：文件夹在前，文件在后，同类型按字母排序
+    result.sort((a, b) => {
+      if (a.type === b.type) {
+        return a.name.localeCompare(b.name)
       }
-    ]
-  },{
-    id: 3,
-    name: '配置文件',
-    type: 'category',
-    expanded: false
+      return a.type === 'category' ? -1 : 1
+    })
+    
+    return result
+  } catch (error) {
+    console.error('读取目录失败:', error)
+    return []
   }
-])
+}
+
+// 分类数据
+const categories = ref([])
+
+// 初始化分类数据
+onMounted(async () => {
+  // 等待一小段时间确保electronAPI已经初始化
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  
+  if (!window.electronAPI) {
+    console.error('electronAPI 未初始化')
+    return
+  }
+  
+  const downloadsPath = '/Users/liang/Downloads'
+  categories.value = await readDirectory(downloadsPath)
+})
 
 // 过滤分类
 const filteredCategories = computed(() => {
@@ -240,10 +238,72 @@ const handleAddCategory = () => {
   // TODO: 实现添加分类逻辑
 }
 
+// 添加文件相关状态
+const showAddFileModal = ref(false)
+const selectedCategory = ref(null)
+
 // 处理添加文件
 const handleAddFile = (category) => {
-  // TODO: 实现添加文件逻辑
+  selectedCategory.value = category
+  showAddFileModal.value = true
   activeDropdown.value = null
+}
+
+// 检查文件名是否存在并返回新的文件名
+const getUniqueFileName = (directory, originalFileName) => {
+  // 分离文件名和扩展名
+  const lastDotIndex = originalFileName.lastIndexOf('.')
+  const nameWithoutExt = lastDotIndex === -1 ? originalFileName : originalFileName.slice(0, lastDotIndex)
+  const extension = lastDotIndex === -1 ? '' : originalFileName.slice(lastDotIndex)
+  
+  // 获取目录下的所有文件
+  const files = directory.children || []
+  
+  // 如果没有重名文件，直接返回原始文件名
+  const hasConflict = files.some(file => file.name === originalFileName)
+  if (!hasConflict) {
+    return originalFileName
+  }
+  
+  // 查找最大的后缀数字
+  let maxNum = 0
+  const pattern = new RegExp(`^${nameWithoutExt}\\（(\\d+)\\）${extension}$`)
+  
+  files.forEach(file => {
+    const match = file.name.match(pattern)
+    if (match) {
+      const num = parseInt(match[1])
+      maxNum = Math.max(maxNum, num)
+    }
+  })
+  
+  // 返回新的文件名
+  return `${nameWithoutExt}（${maxNum + 1}）${extension}`
+}
+
+// 处理添加文件提交
+const handleAddFileSubmit = async ({ fileName, content }) => {
+  try {
+    // 获取唯一的文件名
+    const uniqueFileName = getUniqueFileName(selectedCategory.value, fileName)
+    const newFilePath = `${selectedCategory.value.path}/${uniqueFileName}`
+    
+    await window.electronAPI.writeFile(newFilePath, content)
+    
+    // 重新读取目录内容
+    categories.value = await readDirectory('/Users/liang/Downloads')
+    
+    // 选中新创建的文件
+    const newFile = {
+      id: generateId(),
+      name: uniqueFileName,
+      type: 'file',
+      path: newFilePath
+    }
+    handleFileSelect(newFile)
+  } catch (error) {
+    console.error('创建文件失败:', error)
+  }
 }
 
 // 处理重命名
@@ -295,30 +355,79 @@ const updateFileContent = (categories, fileId, newContent) => {
 }
 
 // 处理编辑器内容变化
-const handleEditorChange = (value) => {
+const handleEditorChange = async (value) => {
   if (selectedFile.value && typeof value === 'string') {
-    const file = findFile(categories.value, selectedFile.value.id)
-    if (file) {
-      file.content = value
+    selectedFile.value.content = value
+  }
+}
+
+// 消息提示状态
+const toast = ref({
+  visible: false,
+  message: '',
+  type: 'success'
+})
+
+// 显示消息提示
+const showToast = (message, type = 'success') => {
+  toast.value.message = message
+  toast.value.type = type
+  toast.value.visible = true
+  
+  // 3秒后自动关闭
+  setTimeout(() => {
+    toast.value.visible = false
+  }, 3000)
+}
+
+// 保存文件
+const saveFile = async () => {
+  if (selectedFile.value && selectedFile.value.content !== undefined) {
+    try {
+      await window.electronAPI.writeFile(selectedFile.value.path, selectedFile.value.content)
+      showToast('保存成功')
+    } catch (error) {
+      console.error('保存失败:', error)
+      showToast('保存失败', 'error')
     }
   }
 }
 
+// 处理键盘快捷键
+const handleKeyDown = (event) => {
+  // 检查是否按下了 Cmd+S (Mac) 或 Ctrl+S (Windows/Linux)
+  if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+    event.preventDefault() // 阻止浏览器默认的保存行为
+    saveFile()
+  }
+}
+
 // 处理文件选择
-const handleFileSelect = (file) => {
+const handleFileSelect = async (file) => {
   console.log('File selected:', file)
   if (file.type === 'file') {
-    // 从categories中获取最新的文件数据
-    const currentFile = findFile(categories.value, file.id)
-    if (currentFile) {
+    try {
+      // 读取文件内容
+      const content = await window.electronAPI.readFile(file.path)
+      
       selectedFile.value = {
-        id: currentFile.id,
-        name: currentFile.name,
-        type: currentFile.type,
-        content: currentFile.content || '' // 确保content有默认值
+        id: file.id,
+        name: file.name,
+        type: file.type,
+        content: content,
+        path: file.path
       }
-      editorLang.value = getLanguageMode(currentFile.name)
+      editorLang.value = getLanguageMode(file.name)
       console.log('Selected file:', selectedFile.value)
+    } catch (error) {
+      console.error('读取文件失败:', error)
+      selectedFile.value = {
+        id: file.id,
+        name: file.name,
+        type: file.type,
+        content: '无法读取文件内容',
+        path: file.path
+      }
     }
   }
 }
@@ -333,10 +442,12 @@ const handleClickOutside = (event) => {
 // 监听全局点击事件
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
